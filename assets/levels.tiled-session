@@ -1,0 +1,55 @@
+{
+    "Map/SizeTest": {
+        "height": 4300,
+        "width": 2
+    },
+    "activeFile": "levels.tmx",
+    "expandedProjectPaths": [
+        "."
+    ],
+    "file.lastUsedOpenFilter": "All Files (*)",
+    "fileStates": {
+        "": {
+            "scaleInEditor": 5.5
+        },
+        "colored_tilemap.tsx": {
+            "scaleInDock": 2,
+            "scaleInEditor": 5.5
+        },
+        "levels.tmx": {
+            "scale": 8,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 81.1875,
+                "y": 110.25
+            }
+        },
+        "levels.tmx#colored_tilemap": {
+            "scaleInDock": 2
+        }
+    },
+    "last.imagePath": "C:/Users/Antonio/projects/rust/bevy/survivors-rs/assets",
+    "last.worldFilePath": "C:/Users/Antonio/projects/rust/bevy/survivors-rs/assets",
+    "loadedWorlds": [
+        "C:/Users/Antonio/projects/rust/bevy/survivors-rs/assets/levels.world"
+    ],
+    "map.height": 64,
+    "map.lastUsedFormat": "tmx",
+    "map.tileHeight": 8,
+    "map.tileWidth": 8,
+    "map.width": 64,
+    "openFiles": [
+        "levels.tmx"
+    ],
+    "project": "levels.tiled-project",
+    "recentFiles": [
+        "levels.tmx",
+        "colored_tilemap.tsx"
+    ],
+    "tileset.lastUsedFormat": "tsx",
+    "tileset.spacing": 1,
+    "tileset.tileSize": {
+        "height": 8,
+        "width": 8
+    }
+}
