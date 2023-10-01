@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 use bevy_ecs_ldtk::prelude::*;
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
+use bevy::input::common_conditions::input_toggle_active;
 
 fn main() {
     App::new()
@@ -15,6 +17,7 @@ fn main() {
         )
         .add_plugins((
             LdtkPlugin,
+            WorldInspectorPlugin::default().run_if(input_toggle_active(false, KeyCode::F1)),
         ))
         .add_systems(Startup, setup)
         .add_systems(Update, (
