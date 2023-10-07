@@ -3,9 +3,7 @@ use bevy::prelude::*;
 use bevy_ecs_ldtk::prelude::*;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy::input::common_conditions::input_toggle_active;
-use bevy_ecs_ldtk::utils::{grid_coords_to_translation, translation_to_grid_coords};
 use bevy_rapier2d::prelude::*;
-use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 
 fn main() {
     App::new()
@@ -23,7 +21,6 @@ fn main() {
             LdtkPlugin,
             RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0),
             // RapierDebugRenderPlugin::default(),
-            FrameTimeDiagnosticsPlugin,
             WorldInspectorPlugin::default().run_if(input_toggle_active(false, KeyCode::F1)),
         ))
         .add_systems(Startup, setup)
@@ -34,13 +31,6 @@ fn main() {
             // spawn_wall_collision,
         ))
         .insert_resource(LevelSelection::default())
-        // .insert_resource(LdtkSettings {
-        //     level_spawn_behavior: LevelSpawnBehavior::UseWorldTranslation {
-        //         load_level_neighbors: true,
-        //     },
-        //     set_clear_color: SetClearColor::FromLevelBackground,
-        //     ..Default::default()
-        // })
         .insert_resource(RapierConfiguration {
             gravity: Vec2::new(0.0, 0.0),
             ..Default::default()
@@ -52,7 +42,7 @@ fn main() {
 
 fn setup(
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
+    asset_server: Res<AssetServer>
 ) {
     // spawn the camera
     let camera = Camera2dBundle::default();
@@ -72,13 +62,6 @@ pub struct Player;
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Default, Component)]
 pub struct Enemy;
-
-// #[derive(Clone, Default, Bundle, LdtkEntity)]
-// pub struct PlayerBundle {
-//     player: Player,
-//     #[sprite_sheet_bundle]
-//     sprite_bundle: SpriteSheetBundle,
-// }
 
 #[derive(Clone, Default, Bundle, LdtkEntity)]
 pub struct PlayerBundle {
@@ -342,47 +325,26 @@ impl From<&EntityInstance> for ColliderBundle {
 }
 
 fn character_movement(
-    mut characters: Query<(&mut Transform, &Player, &mut GridCoords, &EntityInstance)>,
+    mut player_velocities: Query<&mut Velocity, With<Player>>,
     input: Res<Input<KeyCode>>,
-    time: Res<Time>,
 ) {
-    for (mut transform, _, mut grid_coords, entity_instance) in &mut characters {
-        let transform_vec2: Vec2 = Vec2::new(transform.translation.x, transform.translation.y);
-        let grid_size: IVec2 = IVec2::new(entity_instance.width, entity_instance.height);
-        let calc_grid_coords = translation_to_grid_coords(transform_vec2, grid_size);
-        grid_coords.set_if_neq(calc_grid_coords);
+    if let Ok(mut velocity) = player_velocities.get_single_mut() {
+        let up = input.any_pressed([KeyCode::W, KeyCode::Up]);
+        let down = input.any_pressed([KeyCode::S, KeyCode::Down]);
+        let left = input.any_pressed([KeyCode::A, KeyCode::Left]);
+        let right = input.any_pressed([KeyCode::D, KeyCode::Right]);
 
-        // println!("({},{})", transform.translation.x, transform.translation.y);
-        // println!("  {:?}", grid_coords);
-        // println!("  {:?}", entity_instance.grid);
+        let x_axis = -(left as i8) + right as i8;
+        let y_axis = -(down as i8) + up as i8;
 
-        if input.pressed(KeyCode::W) || input.pressed(KeyCode::Up) {
-            transform.translation.y += 128.0 * time.delta_seconds();
-
-            // grid_coords.y += 1;
-        }
-        if input.pressed(KeyCode::S) || input.pressed(KeyCode::Down) {
-            transform.translation.y -= 128.0 * time.delta_seconds();
-
-            // grid_coords.y -= 1;
-        }
-        if input.pressed(KeyCode::D) || input.pressed(KeyCode::Right) {
-            transform.translation.x += 128.0 * time.delta_seconds();
-
-            // grid_coords.x += 1;
-        }
-        if input.pressed(KeyCode::A) || input.pressed(KeyCode::Left) {
-            transform.translation.x -= 128.0 * time.delta_seconds();
-
-            // grid_coords.x -= 1;
+        let mut move_delta = Vec2::new(x_axis as f32, y_axis as f32);
+        if move_delta != Vec2::ZERO {
+            move_delta /= move_delta.length();
         }
 
-        // let new_transform = grid_coords_to_translation(*grid_coords, IVec2::new(8, 8));
-        //
-        // println!("  ({},{})", new_transform.x, new_transform.y);
-        //
-        // transform.translation.x = new_transform.x * time.delta_seconds();
-        // transform.translation.y = new_transform.y * time.delta_seconds();
+        // Update the velocity on the rigid_body_component,
+        // the bevy_rapier plugin will update the Sprite transform.
+        velocity.linvel = move_delta * 128.0;
     }
 }
 
