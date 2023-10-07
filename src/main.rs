@@ -4,7 +4,7 @@ use bevy_ecs_ldtk::prelude::*;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy::input::common_conditions::input_toggle_active;
 use bevy_ecs_ldtk::utils::{grid_coords_to_translation, translation_to_grid_coords};
-use bevy_rapier2d::prelude::*;
+use bevy_rapier3d::prelude::*;
 use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 
 fn main() {
@@ -21,7 +21,8 @@ fn main() {
         )
         .add_plugins((
             LdtkPlugin,
-            RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0),
+            // RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0),
+            RapierPhysicsPlugin::<NoUserData>::default(),
             // RapierDebugRenderPlugin::default(),
             FrameTimeDiagnosticsPlugin,
             WorldInspectorPlugin::default().run_if(input_toggle_active(false, KeyCode::F1)),
@@ -31,7 +32,7 @@ fn main() {
             character_movement,
             bevy::window::close_on_esc,
             camera_fit_inside_current_level,
-            // spawn_wall_collision,
+            spawn_wall_collision,
         ))
         .insert_resource(LevelSelection::default())
         // .insert_resource(LdtkSettings {
@@ -42,7 +43,7 @@ fn main() {
         //     ..Default::default()
         // })
         .insert_resource(RapierConfiguration {
-            gravity: Vec2::new(0.0, 0.0),
+            gravity: Vec3::new(0.0, 0.0, 0.0),
             ..Default::default()
         })
         .register_ldtk_int_cell_for_layer::<WallBundle>("collisions", 1)
@@ -269,6 +270,7 @@ pub fn spawn_wall_collision(
                                 (wall_rect.top as f32 - wall_rect.bottom as f32 + 1.)
                                     * grid_size as f32
                                     / 2.,
+                                10.,
                             ))
                             .insert(RigidBody::Fixed)
                             .insert(Friction::new(1.0))
@@ -312,7 +314,7 @@ impl From<&EntityInstance> for ColliderBundle {
 
         match entity_instance.identifier.as_ref() {
             "Player" => ColliderBundle {
-                collider: Collider::cuboid(6., 14.),
+                collider: Collider::cuboid(6., 14., 2.5),
                 rigid_body: RigidBody::Dynamic,
                 friction: Friction {
                     coefficient: 0.0,
@@ -322,13 +324,13 @@ impl From<&EntityInstance> for ColliderBundle {
                 ..Default::default()
             },
             "Mob" => ColliderBundle {
-                collider: Collider::cuboid(5., 5.),
+                collider: Collider::cuboid(5., 5., 1.),
                 rigid_body: RigidBody::KinematicVelocityBased,
                 rotation_constraints,
                 ..Default::default()
             },
             "Chest" => ColliderBundle {
-                collider: Collider::cuboid(8., 8.),
+                collider: Collider::cuboid(8., 8., 1.),
                 rigid_body: RigidBody::Dynamic,
                 rotation_constraints,
                 gravity_scale: GravityScale(1.0),
