@@ -271,6 +271,7 @@ pub fn spawn_wall_collision(
 
 fn character_movement(
     mut characters: Query<(&mut Transform, &Player, &mut GridCoords, &EntityInstance)>,
+    wall_query: Query<&GridCoords, Added<Wall>>,
     input: Res<Input<KeyCode>>,
     time: Res<Time>,
 ) {
