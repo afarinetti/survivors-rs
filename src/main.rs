@@ -3,9 +3,8 @@ use bevy::prelude::*;
 use bevy_ecs_ldtk::prelude::*;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy::input::common_conditions::input_toggle_active;
-use bevy_ecs_ldtk::utils::{grid_coords_to_translation, translation_to_grid_coords};
-use bevy_rapier2d::prelude::*;
-use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
+use bevy_ecs_ldtk::utils::translation_to_grid_coords;
+use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 
 fn main() {
     App::new()
@@ -21,8 +20,6 @@ fn main() {
         )
         .add_plugins((
             LdtkPlugin,
-            RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0),
-            // RapierDebugRenderPlugin::default(),
             FrameTimeDiagnosticsPlugin,
             WorldInspectorPlugin::default().run_if(input_toggle_active(false, KeyCode::F1)),
         ))
@@ -31,20 +28,8 @@ fn main() {
             character_movement,
             bevy::window::close_on_esc,
             camera_fit_inside_current_level,
-            // spawn_wall_collision,
         ))
         .insert_resource(LevelSelection::default())
-        // .insert_resource(LdtkSettings {
-        //     level_spawn_behavior: LevelSpawnBehavior::UseWorldTranslation {
-        //         load_level_neighbors: true,
-        //     },
-        //     set_clear_color: SetClearColor::FromLevelBackground,
-        //     ..Default::default()
-        // })
-        .insert_resource(RapierConfiguration {
-            gravity: Vec2::new(0.0, 0.0),
-            ..Default::default()
-        })
         .register_ldtk_int_cell_for_layer::<WallBundle>("collisions", 1)
         .register_ldtk_entity_for_layer::<PlayerBundle>("entities", "player")
         .run();
@@ -73,22 +58,19 @@ pub struct Player;
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Default, Component)]
 pub struct Enemy;
 
-// #[derive(Clone, Default, Bundle, LdtkEntity)]
-// pub struct PlayerBundle {
-//     player: Player,
-//     #[sprite_sheet_bundle]
-//     sprite_bundle: SpriteSheetBundle,
-// }
-
 #[derive(Clone, Default, Bundle, LdtkEntity)]
 pub struct PlayerBundle {
     pub player: Player,
+
     #[sprite_sheet_bundle]
     pub sprite_bundle: SpriteSheetBundle,
-    #[from_entity_instance]
-    pub collider_bundle: ColliderBundle,
+
+    // #[from_entity_instance]
+    // pub collider_bundle: ColliderBundle,
+
     #[worldly]
     pub worldly: Worldly,
+
     #[grid_coords]
     grid_coords: GridCoords,
 
@@ -143,21 +125,21 @@ pub fn spawn_wall_collision(
     level_query: Query<(Entity, &Handle<LdtkLevel>)>,
     levels: Res<Assets<LdtkLevel>>,
 ) {
-    /// Represents a wide wall that is 1 tile tall
-    /// Used to spawn wall collisions
-    #[derive(Clone, Eq, PartialEq, Debug, Default, Hash)]
-    struct Plate {
-        left: i32,
-        right: i32,
-    }
-
-    /// A simple rectangle type representing a wall of any size
-    struct Rect {
-        left: i32,
-        right: i32,
-        top: i32,
-        bottom: i32,
-    }
+    // /// Represents a wide wall that is 1 tile tall
+    // /// Used to spawn wall collisions
+    // #[derive(Clone, Eq, PartialEq, Debug, Default, Hash)]
+    // struct Plate {
+    //     left: i32,
+    //     right: i32,
+    // }
+    //
+    // /// A simple rectangle type representing a wall of any size
+    // struct Rect {
+    //     left: i32,
+    //     right: i32,
+    //     top: i32,
+    //     bottom: i32,
+    // }
 
     // Consider where the walls are
     // storing them as GridCoords in a HashSet for quick, easy lookup
@@ -180,165 +162,111 @@ pub fn spawn_wall_collision(
         }
     });
 
-    if !wall_query.is_empty() {
-        level_query.for_each(|(level_entity, level_handle)| {
-            if let Some(level_walls) = level_to_wall_locations.get(&level_entity) {
-                let level = levels
-                    .get(level_handle)
-                    .expect("Level should be loaded by this point");
+    // if !wall_query.is_empty() {
+    //     level_query.for_each(|(level_entity, level_handle)| {
+    //         if let Some(level_walls) = level_to_wall_locations.get(&level_entity) {
+    //             let level = levels
+    //                 .get(level_handle)
+    //                 .expect("Level should be loaded by this point");
+    //
+    //             let LayerInstance {
+    //                 c_wid: width,
+    //                 c_hei: height,
+    //                 grid_size,
+    //                 ..
+    //             } = level
+    //                 .level
+    //                 .layer_instances
+    //                 .clone()
+    //                 .expect("Level asset should have layers")[0];
+    //
+    //             // combine wall tiles into flat "plates" in each individual row
+    //             let mut plate_stack: Vec<Vec<Plate>> = Vec::new();
+    //
+    //             for y in 0..height {
+    //                 let mut row_plates: Vec<Plate> = Vec::new();
+    //                 let mut plate_start = None;
+    //
+    //                 // + 1 to the width so the algorithm "terminates" plates that touch the right edge
+    //                 for x in 0..width + 1 {
+    //                     match (plate_start, level_walls.contains(&GridCoords { x, y })) {
+    //                         (Some(s), false) => {
+    //                             row_plates.push(Plate {
+    //                                 left: s,
+    //                                 right: x - 1,
+    //                             });
+    //                             plate_start = None;
+    //                         }
+    //                         (None, true) => plate_start = Some(x),
+    //                         _ => (),
+    //                     }
+    //                 }
+    //
+    //                 plate_stack.push(row_plates);
+    //             }
+    //
+    //             // combine "plates" into rectangles across multiple rows
+    //             let mut rect_builder: HashMap<Plate, Rect> = HashMap::new();
+    //             let mut prev_row: Vec<Plate> = Vec::new();
+    //             let mut wall_rects: Vec<Rect> = Vec::new();
+    //
+    //             // an extra empty row so the algorithm "finishes" the rects that touch the top edge
+    //             plate_stack.push(Vec::new());
+    //
+    //             for (y, current_row) in plate_stack.into_iter().enumerate() {
+    //                 for prev_plate in &prev_row {
+    //                     if !current_row.contains(prev_plate) {
+    //                         // remove the finished rect so that the same plate in the future starts a new rect
+    //                         if let Some(rect) = rect_builder.remove(prev_plate) {
+    //                             wall_rects.push(rect);
+    //                         }
+    //                     }
+    //                 }
+    //                 for plate in &current_row {
+    //                     rect_builder
+    //                         .entry(plate.clone())
+    //                         .and_modify(|e| e.top += 1)
+    //                         .or_insert(Rect {
+    //                             bottom: y as i32,
+    //                             top: y as i32,
+    //                             left: plate.left,
+    //                             right: plate.right,
+    //                         });
+    //                 }
+    //                 prev_row = current_row;
+    //             }
 
-                let LayerInstance {
-                    c_wid: width,
-                    c_hei: height,
-                    grid_size,
-                    ..
-                } = level
-                    .level
-                    .layer_instances
-                    .clone()
-                    .expect("Level asset should have layers")[0];
-
-                // combine wall tiles into flat "plates" in each individual row
-                let mut plate_stack: Vec<Vec<Plate>> = Vec::new();
-
-                for y in 0..height {
-                    let mut row_plates: Vec<Plate> = Vec::new();
-                    let mut plate_start = None;
-
-                    // + 1 to the width so the algorithm "terminates" plates that touch the right edge
-                    for x in 0..width + 1 {
-                        match (plate_start, level_walls.contains(&GridCoords { x, y })) {
-                            (Some(s), false) => {
-                                row_plates.push(Plate {
-                                    left: s,
-                                    right: x - 1,
-                                });
-                                plate_start = None;
-                            }
-                            (None, true) => plate_start = Some(x),
-                            _ => (),
-                        }
-                    }
-
-                    plate_stack.push(row_plates);
-                }
-
-                // combine "plates" into rectangles across multiple rows
-                let mut rect_builder: HashMap<Plate, Rect> = HashMap::new();
-                let mut prev_row: Vec<Plate> = Vec::new();
-                let mut wall_rects: Vec<Rect> = Vec::new();
-
-                // an extra empty row so the algorithm "finishes" the rects that touch the top edge
-                plate_stack.push(Vec::new());
-
-                for (y, current_row) in plate_stack.into_iter().enumerate() {
-                    for prev_plate in &prev_row {
-                        if !current_row.contains(prev_plate) {
-                            // remove the finished rect so that the same plate in the future starts a new rect
-                            if let Some(rect) = rect_builder.remove(prev_plate) {
-                                wall_rects.push(rect);
-                            }
-                        }
-                    }
-                    for plate in &current_row {
-                        rect_builder
-                            .entry(plate.clone())
-                            .and_modify(|e| e.top += 1)
-                            .or_insert(Rect {
-                                bottom: y as i32,
-                                top: y as i32,
-                                left: plate.left,
-                                right: plate.right,
-                            });
-                    }
-                    prev_row = current_row;
-                }
-
-                commands.entity(level_entity).with_children(|level| {
-                    // Spawn colliders for every rectangle..
-                    // Making the collider a child of the level serves two purposes:
-                    // 1. Adjusts the transforms to be relative to the level for free
-                    // 2. the colliders will be despawned automatically when levels unload
-                    for wall_rect in wall_rects {
-                        level
-                            .spawn_empty()
-                            .insert(Collider::cuboid(
-                                (wall_rect.right as f32 - wall_rect.left as f32 + 1.)
-                                    * grid_size as f32
-                                    / 2.,
-                                (wall_rect.top as f32 - wall_rect.bottom as f32 + 1.)
-                                    * grid_size as f32
-                                    / 2.,
-                            ))
-                            .insert(RigidBody::Fixed)
-                            .insert(Friction::new(1.0))
-                            .insert(Transform::from_xyz(
-                                (wall_rect.left + wall_rect.right + 1) as f32 * grid_size as f32
-                                    / 2.,
-                                (wall_rect.bottom + wall_rect.top + 1) as f32 * grid_size as f32
-                                    / 2.,
-                                0.,
-                            ))
-                            .insert(GlobalTransform::default());
-                    }
-                });
-            }
-        });
-    }
-}
-
-#[derive(Clone, Debug, Default, Bundle, LdtkIntCell)]
-pub struct ColliderBundle {
-    pub collider: Collider,
-    pub rigid_body: RigidBody,
-    pub velocity: Velocity,
-    pub rotation_constraints: LockedAxes,
-    pub gravity_scale: GravityScale,
-    pub friction: Friction,
-    pub density: ColliderMassProperties,
-}
-
-#[derive(Clone, Debug, Default, Bundle, LdtkIntCell)]
-pub struct SensorBundle {
-    pub collider: Collider,
-    pub sensor: Sensor,
-    pub active_events: ActiveEvents,
-    pub rotation_constraints: LockedAxes,
-}
-
-impl From<&EntityInstance> for ColliderBundle {
-    fn from(entity_instance: &EntityInstance) -> ColliderBundle {
-        let rotation_constraints = LockedAxes::ROTATION_LOCKED;
-
-        match entity_instance.identifier.as_ref() {
-            "Player" => ColliderBundle {
-                collider: Collider::cuboid(6., 14.),
-                rigid_body: RigidBody::Dynamic,
-                friction: Friction {
-                    coefficient: 0.0,
-                    combine_rule: CoefficientCombineRule::Min,
-                },
-                rotation_constraints,
-                ..Default::default()
-            },
-            "Mob" => ColliderBundle {
-                collider: Collider::cuboid(5., 5.),
-                rigid_body: RigidBody::KinematicVelocityBased,
-                rotation_constraints,
-                ..Default::default()
-            },
-            "Chest" => ColliderBundle {
-                collider: Collider::cuboid(8., 8.),
-                rigid_body: RigidBody::Dynamic,
-                rotation_constraints,
-                gravity_scale: GravityScale(1.0),
-                friction: Friction::new(0.5),
-                density: ColliderMassProperties::Density(15.0),
-                ..Default::default()
-            },
-            _ => ColliderBundle::default(),
-        }
-    }
+                // commands.entity(level_entity).with_children(|level| {
+                //     // Spawn colliders for every rectangle..
+                //     // Making the collider a child of the level serves two purposes:
+                //     // 1. Adjusts the transforms to be relative to the level for free
+                //     // 2. the colliders will be despawned automatically when levels unload
+                //     for wall_rect in wall_rects {
+                //         level
+                //             .spawn_empty()
+                //             .insert(Collider::cuboid(
+                //                 (wall_rect.right as f32 - wall_rect.left as f32 + 1.)
+                //                     * grid_size as f32
+                //                     / 2.,
+                //                 (wall_rect.top as f32 - wall_rect.bottom as f32 + 1.)
+                //                     * grid_size as f32
+                //                     / 2.,
+                //             ))
+                //             .insert(RigidBody::Fixed)
+                //             .insert(Friction::new(1.0))
+                //             .insert(Transform::from_xyz(
+                //                 (wall_rect.left + wall_rect.right + 1) as f32 * grid_size as f32
+                //                     / 2.,
+                //                 (wall_rect.bottom + wall_rect.top + 1) as f32 * grid_size as f32
+                //                     / 2.,
+                //                 0.,
+                //             ))
+                //             .insert(GlobalTransform::default());
+                //     }
+                // });
+        //     }
+        // });
+    // }
 }
 
 fn character_movement(
@@ -356,24 +284,20 @@ fn character_movement(
         // println!("  {:?}", grid_coords);
         // println!("  {:?}", entity_instance.grid);
 
-        if input.pressed(KeyCode::W) || input.pressed(KeyCode::Up) {
+        if input.any_pressed([KeyCode::W, KeyCode::Up]) {
             transform.translation.y += 128.0 * time.delta_seconds();
-
             // grid_coords.y += 1;
         }
-        if input.pressed(KeyCode::S) || input.pressed(KeyCode::Down) {
+        if input.any_pressed([KeyCode::S, KeyCode::Down]) {
             transform.translation.y -= 128.0 * time.delta_seconds();
-
             // grid_coords.y -= 1;
         }
-        if input.pressed(KeyCode::D) || input.pressed(KeyCode::Right) {
+        if input.any_pressed([KeyCode::D, KeyCode::Right]) {
             transform.translation.x += 128.0 * time.delta_seconds();
-
             // grid_coords.x += 1;
         }
-        if input.pressed(KeyCode::A) || input.pressed(KeyCode::Left) {
+        if input.any_pressed([KeyCode::A, KeyCode::Left]) {
             transform.translation.x -= 128.0 * time.delta_seconds();
-
             // grid_coords.x -= 1;
         }
 
