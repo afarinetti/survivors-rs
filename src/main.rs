@@ -23,7 +23,9 @@ fn main() {
             // RapierDebugRenderPlugin::default(),
             WorldInspectorPlugin::default().run_if(input_toggle_active(false, KeyCode::F1)),
         ))
-        .add_systems(Startup, setup)
+        .add_systems(Startup, (
+            setup,
+        ))
         .add_systems(Update, (
             character_movement,
             bevy::window::close_on_esc,
@@ -49,7 +51,7 @@ fn setup(
     commands.spawn(camera);
 
     commands.spawn(LdtkWorldBundle {
-        ldtk_handle: asset_server.load("levels.ldtk"),
+        ldtk_handle: asset_server.load("levels_test.ldtk"),
         ..default()
     });
 }
@@ -79,7 +81,7 @@ pub struct PlayerBundle {
     // #[from_entity_instance]
     // items: Items,
 
-    // The whole EntityInstance can be stored directly as an EntityInstance component
+    // The whole EntityInstance can be stored directly as an En tityInstance component
     #[from_entity_instance]
     entity_instance: EntityInstance,
 }
@@ -87,6 +89,8 @@ pub struct PlayerBundle {
 #[derive(Clone, Default, Bundle, LdtkIntCell)]
 pub struct WallBundle {
     wall: Wall,
+    pub collider: Collider,
+    // rigid_body: RigidBody,
 }
 
 pub fn update_level_selection(
@@ -163,6 +167,14 @@ pub fn spawn_wall_collision(
         }
     });
 
+    for (key, value) in level_to_wall_locations.iter().clone() {
+        print!("{:?}: ", key);
+        for grid_coord in value {
+            print!("[{}, {}], ", grid_coord.x, grid_coord.y);
+        }
+        println!()
+    }
+
     if !wall_query.is_empty() {
         level_query.for_each(|(level_entity, level_handle)| {
             if let Some(level_walls) = level_to_wall_locations.get(&level_entity) {
@@ -206,6 +218,12 @@ pub fn spawn_wall_collision(
                     plate_stack.push(row_plates);
                 }
 
+                for plates in plate_stack.iter().clone() {
+                    for plate in plates {
+                        println!("plate[left={}, right={}]", plate.left, plate.right);
+                    }
+                }
+
                 // combine "plates" into rectangles across multiple rows
                 let mut rect_builder: HashMap<Plate, Rect> = HashMap::new();
                 let mut prev_row: Vec<Plate> = Vec::new();
@@ -235,6 +253,11 @@ pub fn spawn_wall_collision(
                             });
                     }
                     prev_row = current_row;
+                }
+
+                for wall_rect in wall_rects.iter().clone() {
+                    println!("rect[top={}, bottom={}, left={}, right={}]",
+                        wall_rect.top, wall_rect.bottom, wall_rect.left, wall_rect.right);
                 }
 
                 commands.entity(level_entity).with_children(|level| {
