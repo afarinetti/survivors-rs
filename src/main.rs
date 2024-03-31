@@ -1,21 +1,22 @@
-use std::collections::{HashMap, HashSet};
+use bevy::input::common_conditions::input_toggle_active;
 use bevy::prelude::*;
 use bevy_ecs_ldtk::prelude::*;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use bevy::input::common_conditions::input_toggle_active;
 use bevy_rapier2d::prelude::*;
+use std::collections::{HashMap, HashSet};
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins
-            .set(WindowPlugin {
-                primary_window: Some(Window {
-                    title: "Rust Survivors-Like".into(),
+        .add_plugins(
+            DefaultPlugins
+                .set(WindowPlugin {
+                    primary_window: Some(Window {
+                        title: "Rust Survivors-Like".into(),
+                        ..default()
+                    }),
                     ..default()
-                }),
-                ..default()
-            })
-            .set(ImagePlugin::default_nearest())
+                })
+                .set(ImagePlugin::default_nearest()),
         )
         .add_plugins((
             LdtkPlugin,
@@ -23,15 +24,16 @@ fn main() {
             // RapierDebugRenderPlugin::default(),
             WorldInspectorPlugin::default().run_if(input_toggle_active(false, KeyCode::F1)),
         ))
-        .add_systems(Startup, (
-            setup,
-        ))
-        .add_systems(Update, (
-            character_movement,
-            bevy::window::close_on_esc,
-            camera_fit_inside_current_level,
-            // spawn_wall_collision,
-        ))
+        .add_systems(Startup, (setup,))
+        .add_systems(
+            Update,
+            (
+                character_movement,
+                bevy::window::close_on_esc,
+                camera_fit_inside_current_level,
+                // spawn_wall_collision,
+            ),
+        )
         .insert_resource(LevelSelection::default())
         .insert_resource(RapierConfiguration {
             gravity: Vec2::new(0.0, 0.0),
@@ -42,10 +44,7 @@ fn main() {
         .run();
 }
 
-fn setup(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>
-) {
+fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     // spawn the camera
     let camera = Camera2dBundle::default();
     commands.spawn(camera);
@@ -256,8 +255,10 @@ pub fn spawn_wall_collision(
                 }
 
                 for wall_rect in wall_rects.iter().clone() {
-                    println!("rect[top={}, bottom={}, left={}, right={}]",
-                        wall_rect.top, wall_rect.bottom, wall_rect.left, wall_rect.right);
+                    println!(
+                        "rect[top={}, bottom={}, left={}, right={}]",
+                        wall_rect.top, wall_rect.bottom, wall_rect.left, wall_rect.right
+                    );
                 }
 
                 commands.entity(level_entity).with_children(|level| {
@@ -376,11 +377,18 @@ const ASPECT_RATIO: f32 = 16.0 / 9.0;
 pub fn camera_fit_inside_current_level(
     mut camera_query: Query<(&mut OrthographicProjection, &mut Transform), Without<Player>>,
     player_query: Query<&Transform, With<Player>>,
-    level_query: Query<(&Transform, &Handle<LdtkLevel>), (Without<OrthographicProjection>, Without<Player>)>,
+    level_query: Query<
+        (&Transform, &Handle<LdtkLevel>),
+        (Without<OrthographicProjection>, Without<Player>),
+    >,
     level_selection: Res<LevelSelection>,
     ldtk_levels: Res<Assets<LdtkLevel>>,
 ) {
-    if let Ok(Transform { translation: player_translation, .. }) = player_query.get_single() {
+    if let Ok(Transform {
+        translation: player_translation,
+        ..
+    }) = player_query.get_single()
+    {
         let player_translation = *player_translation;
 
         let (mut orthographic_projection, mut camera_transform) = camera_query.single_mut();
@@ -420,4 +428,3 @@ pub fn camera_fit_inside_current_level(
         }
     }
 }
-
